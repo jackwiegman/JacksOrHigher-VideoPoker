@@ -12,7 +12,12 @@ Date: 2026-05-08
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-import pythonGraph as pg
+try:
+    import pythonGraph as pg
+    _SOUND_AVAILABLE = True
+except Exception:
+    pg = None
+    _SOUND_AVAILABLE = False
 
 from deck import Deck, ASSETS_DIR
 from scorer import evaluate, evaluate_deuces_wild, PAYOUTS, PAYOUTS_DW
@@ -315,8 +320,12 @@ class VideoPokerApp:
     # Sound
     # -------------------------------------------------------------------------
     def _play_sound(self, path: str) -> None:
-        """Play a sound file using pythonGraph."""
-        pg.play_sound_effect(path)
+        if not _SOUND_AVAILABLE:
+            return
+        try:
+            pg.play_sound_effect(path)
+        except Exception:
+            pass
 
     # -------------------------------------------------------------------------
     # Betting callbacks
