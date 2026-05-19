@@ -1,0 +1,192 @@
+@startuml sequence_diagram
+skinparam backgroundColor #1a1a2e
+skinparam sequenceParticipantBackgroundColor #0f3460
+skinparam sequenceParticipantBorderColor #e94560
+skinparam sequenceParticipantFontColor #ffd700
+skinparam sequenceArrowColor #e0e0e0
+skinparam sequenceArrowFontColor #c0c0c0
+skinparam sequenceDividerBackgroundColor #0f3460
+skinparam sequenceDividerFontColor #ffd700
+skinparam sequenceDividerBorderColor #e94560
+skinparam sequenceGroupBackgroundColor #16213e
+skinparam sequenceGroupBorderColor #e94560
+skinparam sequenceGroupFontColor #ffd700
+skinparam noteBackgroundColor #0f3460
+skinparam noteFontColor #e0e0e0
+skinparam noteBorderColor #e94560
+skinparam titleFontColor #ffd700
+skinparam titleFontSize 18
+skinparam lifelineBorderColor #e94560
+
+title Video Poker — Sequence Diagram (One Full Hand)
+
+actor       User              as U
+participant VideoPokerApp     as App
+participant Player            as P
+participant Deck              as D
+participant ScoreEvaluator    as SE
+participant "pythonGraph /\nsubprocess" as Sound
+
+'══════════════════════════════════════════════════════════════
+== STARTUP SEQUENCE ==
+'══════════════════════════════════════════════════════════════
+
+U -> App : launch main.py
+activate App
+
+App -> App : _build_ui()\n[all controls disabled]
+
+App -> App : root.after(100, _startup)
+
+App -> U : _ask_name() popup
+U --> App : "Alice"
+
+App -> P : Player("Alice")
+activate P
+
+App -> P : load()
+P --> App : True (existing save found)\nor False (new player)
+deactivate P
+
+alt New player
+    App -> U : _ask_add_funds() popup
+    U --> App : 200 coins
+    App -> P : add_funds(200)
+    activate P
+    App -> P : save()
+    P --> App : writes game_saves/Alice.txt
+    deactivate P
+end
+
+App -> U : _ask_num_decks() popup
+U --> App : 1 deck
+App -> D : Deck(1)
+activate D
+
+App -> U : _ask_variant() popup
+U --> App : "Jacks or Better"
+
+App -> App : state = BETTING\n_unlock_for_betting()
+
+'══════════════════════════════════════════════════════════════
+== BETTING PHASE ==
+'══════════════════════════════════════════════════════════════
+
+group Betting [User places bet]
+    loop Up to 50 times (Bet One) or once (Bet Amount / All In)
+        U -> App : press "Bet One Coin"
+        App -> App : _on_bet_one()
+
+        alt bank == 0
+            App -> U : _ask_add_funds() popup
+            U --> App : more coins
+            App -> P : add_funds() + save()
+        else bank > 0
+            App -> P : bank -= 1
+            App -> App : bet += 1\nrefresh labels
+        end
+    end
+end
+
+note over App : bet = 5 coins\nbank reduced by 5
+
+'══════════════════════════════════════════════════════════════
+== INITIAL DEAL ==
+'══════════════════════════════════════════════════════════════
+
+U -> App : press "Deal"
+App -> App : _on_deal() → _begin_deal()
+App -> App : state = ANIMATING\n_lock_ui()
+
+alt should_reshuffle
+    App -> D : reshuffle()
+    App -> App : show "♻ Deck reshuffled" banner\nwait 800 ms
+end
+
+App -> App : _deal_cards()
+
+loop 5 times
+    App -> D : deal_card()
+    D --> App : card_index (0–51)
+end
+
+App -> App : show all card backs
+
+loop slot 0 → 4  [350 ms between each]
+    App -> App : _flip_initial(slot)\nshow card face image
+end
+
+App -> App : state = DEALT\nreset_keeps()\n_unlock_for_draw()
+
+'══════════════════════════════════════════════════════════════
+== DRAW PHASE ==
+'══════════════════════════════════════════════════════════════
+
+group Player chooses keep / discard
+    loop For each card
+        U -> App : toggle Keep/Discard button
+        App -> App : _toggle_keep(idx)\nupdate button color
+    end
+end
+
+U -> App : press "Draw"
+App -> App : _on_deal() → _begin_draw()
+App -> App : state = SCORING\n_lock_ui()
+
+note over App : replace = [slots where kept=False]
+
+loop For each discarded slot
+    App -> D : deal_card()
+    D --> App : new card_index
+end
+
+loop discarded slots  [350 ms between each]
+    App -> App : _flip_draw(slot)\nshow replacement card face
+end
+
+'══════════════════════════════════════════════════════════════
+== SCORING ==
+'══════════════════════════════════════════════════════════════
+
+App -> App : _finish_scoring()
+
+alt Jacks or Better mode
+    App -> SE : evaluate(hand)
+else Deuces Wild mode
+    App -> SE : evaluate_deuces_wild(hand)
+end
+
+SE --> App : (hand_name, multiplier)
+
+App -> App : payout = multiplier × bet
+
+alt payout > 0  [Win]
+    App -> Sound : play_sound_effect(won.wav)\n[subprocess fallback: paplay]
+    App -> App : result = "★ {hand_name}! Payout: {payout}"
+else payout == 0  [Loss]
+    App -> Sound : play_sound_effect(lost.mp3)\n[subprocess fallback: mpg123]
+    App -> App : result = "No Win — {bet} coins lost"
+end
+
+App -> P : bank += payout
+App -> P : save()
+P --> App : writes game_saves/Alice.txt
+
+App -> App : state = BETTING\nbet = 0\n_unlock_for_betting()
+
+note over App, U : Ready for next hand
+
+'══════════════════════════════════════════════════════════════
+== EXIT ==
+'══════════════════════════════════════════════════════════════
+
+U -> App : press "Exit"
+App -> App : _on_exit()
+App -> P : save()
+P --> App : bank written to file
+deactivate P
+App -> App : root.quit()
+deactivate App
+deactivate D
+
+@enduml

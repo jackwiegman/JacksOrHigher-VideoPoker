@@ -1,0 +1,186 @@
+@startuml class_diagram
+skinparam backgroundColor #1a1a2e
+skinparam classBackgroundColor #16213e
+skinparam classBorderColor #0f3460
+skinparam classHeaderBackgroundColor #0f3460
+skinparam classFontColor #e0e0e0
+skinparam classAttributeFontColor #c0c0c0
+skinparam arrowColor #e94560
+skinparam stereotypeFontColor #e94560
+skinparam noteBackgroundColor #0f3460
+skinparam noteFontColor #e0e0e0
+skinparam noteBorderColor #e94560
+skinparam titleFontColor #ffd700
+skinparam titleFontSize 18
+
+title Video Poker — Class Diagram
+
+'──────────────────────────────────────────────────────────────
+' Deck
+'──────────────────────────────────────────────────────────────
+class Deck {
+    - __num_decks    : int
+    - __deck_counts  : list[int]
+    - __deck_images  : list[str]
+    - __cards_dealt  : int
+    --
+    + num_decks      : int  <<property>>
+    + cards_dealt    : int  <<property>>
+    + total_cards    : int  <<property>>
+    + should_reshuffle : bool <<property>>
+    --
+    + deal_card()    : int
+    + reshuffle()    : None
+    + image_for(card_index: int) : str
+}
+
+note right of Deck
+  Two parallel lists (per spec):
+  deck_counts[i] — copies remaining
+  deck_images[i] — path to GIF
+  Reshuffle threshold: 60% dealt
+  Card index math:
+    index // 13 → suit (0–3)
+    index % 13  → face (0–12)
+end note
+
+'──────────────────────────────────────────────────────────────
+' Player
+'──────────────────────────────────────────────────────────────
+class Player {
+    - __name : str
+    - __bank : float
+    --
+    + name : str   <<property>>
+    + bank : float <<property/setter>>
+    --
+    + load()       : bool
+    + save()       : None
+    + add_funds(coins: int) : None
+}
+
+note right of Player
+  Persists to:
+  game_saves/<name>.txt
+  Each coin = $5.00
+  bank setter validates ≥ 0
+end note
+
+'──────────────────────────────────────────────────────────────
+' ScoreEvaluator
+'──────────────────────────────────────────────────────────────
+class ScoreEvaluator {
+    --
+    + {static} evaluate(hand: list[int]) : tuple[str, int]
+    + {static} evaluate_deuces_wild(hand: list[int]) : tuple[str, int]
+}
+
+note bottom of ScoreEvaluator
+  Both methods build:
+    suit_checker[4]  (index = card // 13)
+    face_checker[13] (index = card % 13)
+  evaluate_deuces_wild: face index 1 (Twos) are wild
+  Returns: (hand_name, payout_multiplier)
+end note
+
+'──────────────────────────────────────────────────────────────
+' VideoPokerApp
+'──────────────────────────────────────────────────────────────
+class VideoPokerApp {
+    - __root         : tk.Tk
+    - __state        : str
+    - __player       : Player
+    - __deck         : Deck
+    - __hand         : list[int]
+    - __kept         : list[bool]
+    - __bet          : int
+    - __deuces_wild  : bool
+    - __img_cache    : list[PhotoImage]
+    - __card_labels  : list[Label]
+    - __keep_btns    : list[Button]
+    - __bet_btns     : list[Button]
+    - __btn_deal     : Button
+    --
+    + run() : None
+    - _build_ui() : None
+    - _startup() : None
+    ..Betting..
+    - _on_bet_one() : None
+    - _on_bet_amount() : None
+    - _on_all_in() : None
+    - _on_exit() : None
+    ..Game Loop..
+    - _on_deal() : None
+    - _begin_deal() : None
+    - _deal_cards() : None
+    - _flip_initial(slot: int) : None
+    - _begin_draw() : None
+    - _flip_draw(slots, idx) : None
+    - _finish_scoring() : None
+    ..UI Helpers..
+    - _lock_ui() : None
+    - _unlock_for_betting() : None
+    - _unlock_for_draw() : None
+    - _toggle_keep(idx: int) : None
+    - _refresh_keep_btn(idx: int) : None
+    - _play_sound(path: str) : None
+    ..Popups..
+    - _ask_name() : str | None
+    - _ask_add_funds(...) : int
+    - _ask_num_decks() : int
+    - _ask_variant() : bool
+    - _center_window(win) : None
+}
+
+'──────────────────────────────────────────────────────────────
+' Module-level constants (shown as class-like entities)
+'──────────────────────────────────────────────────────────────
+class "PAYOUTS\n(Jacks or Better)" as PAYOUTS <<dict>> {
+    Royal Flush       = 2000
+    Straight Flush    = 250
+    Four of a Kind    = 125
+    Full House        = 40
+    Flush             = 25
+    Straight          = 20
+    Three of a Kind   = 15
+    Two Pair          = 10
+    Pair JB           = 5
+    No Win            = 0
+}
+
+class "PAYOUTS_DW\n(Deuces Wild)" as PAYOUTS_DW <<dict>> {
+    Five of a Kind    = 5000
+    Royal Flush       = 2000
+    Straight Flush    = 250
+    Four of a Kind    = 125
+    Full House        = 40
+    Flush             = 25
+    Straight          = 20
+    Three of a Kind   = 15
+    Two Pair          = 10
+    Pair JB           = 5
+    No Win            = 0
+}
+
+'──────────────────────────────────────────────────────────────
+' State machine note
+'──────────────────────────────────────────────────────────────
+note as StateMachine
+  <b>VideoPokerApp State Machine</b>
+  STARTUP → BETTING → ANIMATING
+            ↑              ↓
+          SCORING ← DEALT ←┘
+end note
+
+'──────────────────────────────────────────────────────────────
+' Relationships
+'──────────────────────────────────────────────────────────────
+VideoPokerApp "1" *-- "0..1" Deck    : owns >
+VideoPokerApp "1" *-- "0..1" Player  : owns >
+VideoPokerApp ..>  ScoreEvaluator    : uses (evaluate / evaluate_deuces_wild) >
+VideoPokerApp ..>  PAYOUTS           : displays payout table >
+VideoPokerApp ..>  PAYOUTS_DW        : displays payout table (DW) >
+ScoreEvaluator ..> PAYOUTS           : returns multiplier from >
+ScoreEvaluator ..> PAYOUTS_DW        : returns multiplier from >
+
+@enduml
