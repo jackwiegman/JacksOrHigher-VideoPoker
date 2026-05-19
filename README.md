@@ -20,7 +20,7 @@ A fully-featured video poker game with a Tkinter GUI, persistent player saves, t
 
 | Startup | Gameplay |
 |---------|----------|
-| Modal dialogs guide the player through name entry, bank funding, deck count, and variant selection | Casino-green table with 5 card slots, Keep/Discard controls, payout table, and bet/bank display |
+| ![Startup dialog](doc/screenshots/startup.png) | ![Gameplay](doc/screenshots/gameplay.png) |
 
 ---
 
@@ -105,6 +105,18 @@ State transitions prevent invalid actions (e.g., betting during animation or dea
 
 ---
 
+## UML Diagrams
+
+### Class Diagram
+
+![Class Diagram](doc/class_diagram.png)
+
+### Sequence Diagram
+
+![Sequence Diagram](doc/sequence_diagram.png)
+
+---
+
 ## Setup
 
 **Requirements**: Python 3.8+ with Tkinter (included in standard CPython distributions).  
@@ -118,8 +130,8 @@ cd VideoPokerGame
 python -m venv poker_venv
 source poker_venv/bin/activate   # Windows: poker_venv\Scripts\activate
 
-# (Optional) Install sound library for audio effects
-pip install pythonGraph
+# (Optional) Install sound libraries for audio effects
+pip install pythonGraph pygame
 ```
 
 No other third-party packages are required.

@@ -1,16 +1,4 @@
 @startuml class_diagram
-skinparam backgroundColor #1a1a2e
-skinparam classBackgroundColor #16213e
-skinparam classBorderColor #0f3460
-skinparam classHeaderBackgroundColor #0f3460
-skinparam classFontColor #e0e0e0
-skinparam classAttributeFontColor #c0c0c0
-skinparam arrowColor #e94560
-skinparam stereotypeFontColor #e94560
-skinparam noteBackgroundColor #0f3460
-skinparam noteFontColor #e0e0e0
-skinparam noteBorderColor #e94560
-skinparam titleFontColor #ffd700
 skinparam titleFontSize 18
 
 title Video Poker — Class Diagram

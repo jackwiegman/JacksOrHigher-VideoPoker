@@ -1,22 +1,5 @@
 @startuml sequence_diagram
-skinparam backgroundColor #1a1a2e
-skinparam sequenceParticipantBackgroundColor #0f3460
-skinparam sequenceParticipantBorderColor #e94560
-skinparam sequenceParticipantFontColor #ffd700
-skinparam sequenceArrowColor #e0e0e0
-skinparam sequenceArrowFontColor #c0c0c0
-skinparam sequenceDividerBackgroundColor #0f3460
-skinparam sequenceDividerFontColor #ffd700
-skinparam sequenceDividerBorderColor #e94560
-skinparam sequenceGroupBackgroundColor #16213e
-skinparam sequenceGroupBorderColor #e94560
-skinparam sequenceGroupFontColor #ffd700
-skinparam noteBackgroundColor #0f3460
-skinparam noteFontColor #e0e0e0
-skinparam noteBorderColor #e94560
-skinparam titleFontColor #ffd700
 skinparam titleFontSize 18
-skinparam lifelineBorderColor #e94560
 
 title Video Poker — Sequence Diagram (One Full Hand)
 
@@ -25,7 +8,7 @@ participant VideoPokerApp     as App
 participant Player            as P
 participant Deck              as D
 participant ScoreEvaluator    as SE
-participant "pythonGraph /\nsubprocess" as Sound
+participant "pythonGraph" as Sound
 
 '══════════════════════════════════════════════════════════════
 == STARTUP SEQUENCE ==
@@ -161,10 +144,10 @@ SE --> App : (hand_name, multiplier)
 App -> App : payout = multiplier × bet
 
 alt payout > 0  [Win]
-    App -> Sound : play_sound_effect(won.wav)\n[subprocess fallback: paplay]
+    App -> Sound : play_sound_effect(won.wav)
     App -> App : result = "★ {hand_name}! Payout: {payout}"
 else payout == 0  [Loss]
-    App -> Sound : play_sound_effect(lost.mp3)\n[subprocess fallback: mpg123]
+    App -> Sound : play_sound_effect(lost.mp3)
     App -> App : result = "No Win — {bet} coins lost"
 end
 
